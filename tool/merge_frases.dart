@@ -15,6 +15,8 @@ import 'dart:io';
 /// ordem, e aberturas iguais ficam espalhadas (some a sensação de "tudo igual").
 ///
 /// Rode:  dart run tool/merge_frases.dart
+const _origDirs = ['tool/frases_orig', 'tool/frases_orig2'];
+
 void main() {
   final index = (json.decode(File('assets/frases/index.json').readAsStringSync())
           as List)
@@ -25,7 +27,10 @@ void main() {
   for (final meta in index) {
     final id = meta['id'] as String;
     final combos = _read('tool/frases_combos/$id.json');
-    final orig = _read('tool/frases_orig/$id.json');
+    // Originais podem vir de vários lotes (frases_orig, frases_orig2, ...).
+    final orig = <String>[
+      for (final dir in _origDirs) ..._read('$dir/$id.json'),
+    ];
     totalOrig += orig.length;
 
     // Dedup preservando 1ª ocorrência (case/space-insensitive).
