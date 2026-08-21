@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:gal/gal.dart';
@@ -11,21 +12,40 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../data/app_info.dart';
 import '../data/app_theme.dart';
+import '../data/image_backgrounds.dart';
+import '../data/photo_backgrounds.dart';
 import '../data/story_backgrounds.dart';
-import '../services/ads_service.dart';
+import '../data/textures.dart';
 import '../services/app_state.dart';
-import 'store_screen.dart';
 
-/// Editor PRO: cria uma frase como imagem (formatos, fontes, cores, sua foto,
-/// assinatura e salvar na galeria). Recursos PRO liberados no premium.
+/// Editor PRO: cria uma frase como imagem (formatos, fontes, cores, fundos,
+/// texturas, fotos reais, sua foto, filtros, assinatura e salvar na galeria).
+/// Tudo grátis.
 class CreateScreen extends StatefulWidget {
-  const CreateScreen({super.key, this.initialText, this.initialBg});
+  const CreateScreen({
+    super.key,
+    this.initialText,
+    this.initialBg,
+    this.initialImageBg,
+    this.initialTexture,
+    this.initialPhotoUrl,
+  });
 
-  /// Quando aberto a partir da galeria "Frases com Imagens".
+  /// Texto inicial — abre o editor já com a frase escolhida.
   final String? initialText;
+
+  /// Fundo-gradiente inicial (índice em StoryBg.all).
   final int? initialBg;
+
+  /// Fundo-imagem inicial (índice em ImageBackgrounds.all).
+  final int? initialImageBg;
+
+  /// Textura inicial (índice em Textures.all).
+  final int? initialTexture;
+
+  /// Foto real inicial (URL do photo_backgrounds).
+  final String? initialPhotoUrl;
 
   @override
   State<CreateScreen> createState() => _CreateScreenState();
@@ -45,15 +65,12 @@ class _CreateScreenState extends State<CreateScreen> {
   int _format = 0;
   int _font = 0;
   int _color = 0;
-  String? _photoPath;
+  String? _photoPath; // foto do usuário (galeria do celular)
+  String? _photoUrl; // foto real (Unsplash)
+  int? _imageBg; // fundo-imagem offline
+  int? _texture; // textura offline
+  int _filter = 0; // filtro de cor
   bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initialText != null) _controller.text = widget.initialText!;
-    if (widget.initialBg != null) _bg = widget.initialBg!;
-  }
 
   static const _formats = [
     _Format('Story', 9 / 16),
@@ -61,7 +78,6 @@ class _CreateScreenState extends State<CreateScreen> {
     _Format('Retrato', 4 / 5),
   ];
 
-  // 1ª fonte/cor são grátis; o resto é PRO.
   static const _fonts = [
     'Lora',
     'Montserrat',
@@ -82,68 +98,35 @@ class _CreateScreenState extends State<CreateScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialText != null && widget.initialText!.trim().isNotEmpty) {
+      _controller.text = widget.initialText!.trim();
+    }
+    if (widget.initialBg != null &&
+        widget.initialBg! >= 0 &&
+        widget.initialBg! < StoryBg.all.length) {
+      _bg = widget.initialBg!;
+    }
+    if (widget.initialImageBg != null) _imageBg = widget.initialImageBg;
+    if (widget.initialTexture != null) _texture = widget.initialTexture;
+    if (widget.initialPhotoUrl != null) _photoUrl = widget.initialPhotoUrl;
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  bool _pro(AppState s) =>
-      s.isPremium || s.ownsExclusivePack || s.hasTemporaryPro;
-
-  /// Recurso PRO: oferece comprar OU assistir anúncio (libera 24h).
-  void _unlock(AppState s) {
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 4, 20, 2),
-              child: Text('Recurso PRO 💎',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(
-                  'Desbloqueie com o Premium ou assista a um anúncio e use por 24h.',
-                  textAlign: TextAlign.center),
-            ),
-            ListTile(
-              leading: const Icon(Icons.play_circle_fill_rounded,
-                  color: Color(0xFF16A34A)),
-              title: const Text('Assistir anúncio e liberar 24h'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final shown = await AdsService.instance.showRewarded(
-                    () => s.grantTemporaryPro(const Duration(hours: 24)));
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(shown
-                        ? 'PRO liberado por 24h! Aproveite 🎉'
-                        : 'Anúncio carregando, tente de novo em instantes.')));
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.workspace_premium_rounded,
-                  color: Color(0xFFD9A406)),
-              title: const Text('Comprar Premium'),
-              subtitle: const Text('Desbloqueia pra sempre'),
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const StoreScreen()));
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<Uint8List?> _capture() async {
+    // Garante que a foto de rede esteja carregada antes de capturar.
+    if (_photoUrl != null) {
+      try {
+        await precacheImage(CachedNetworkImageProvider(_photoUrl!), context);
+        await WidgetsBinding.instance.endOfFrame;
+      } catch (_) {}
+    }
     final boundary =
         _cardKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
     final img = await boundary.toImage(pixelRatio: 3.5);
@@ -159,10 +142,10 @@ class _CreateScreenState extends State<CreateScreen> {
       if (bytes == null) return;
       final dir = await getTemporaryDirectory();
       final file =
-          File('${dir.path}/aniversario_${DateTime.now().millisecondsSinceEpoch}.png');
+          File('${dir.path}/frase_${DateTime.now().millisecondsSinceEpoch}.png');
       await file.writeAsBytes(bytes);
       await Share.shareXFiles([XFile(file.path)],
-          text: noWatermark ? '' : '🌸 ${AppInfo.appName}\n${AppInfo.shareFooter}');
+          text: noWatermark ? '' : 'Feito no app Frases Bonitas 🌸');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -192,7 +175,14 @@ class _CreateScreenState extends State<CreateScreen> {
   Future<void> _pickPhoto() async {
     final x = await ImagePicker()
         .pickImage(source: ImageSource.gallery, imageQuality: 90);
-    if (x != null) setState(() => _photoPath = x.path);
+    if (x != null) {
+      setState(() {
+        _photoPath = x.path;
+        _photoUrl = null;
+        _imageBg = null;
+        _texture = null;
+      });
+    }
   }
 
   Future<void> _editSignature(AppState s) async {
@@ -229,27 +219,50 @@ class _CreateScreenState extends State<CreateScreen> {
         ],
       );
 
+  /// Limpa qualquer fundo-imagem/foto (volta pro gradiente).
+  void _clearImages() {
+    _photoPath = null;
+    _photoUrl = null;
+    _imageBg = null;
+    _texture = null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final pro = _pro(state);
     final bg = StoryBg.all[_bg];
     final color = _colors[_color];
+    final filterColor = CardFilters.color(_filter);
     final text = _controller.text.trim().isEmpty
         ? 'Escreva a sua frase aqui...'
         : _controller.text.trim();
 
-    // Regra: assinatura personalizada (PRO) sempre aparece quando preenchida;
-    // premium sem assinatura = imagem limpa; grátis = marca d'água do app.
+    // Prioridade do fundo: foto do usuário > foto real > fundo-imagem > textura.
+    DecorationImage? bgImage;
+    final bool hasPhotoOverlay = _photoPath != null || _photoUrl != null;
+    if (_photoPath != null) {
+      bgImage =
+          DecorationImage(image: FileImage(File(_photoPath!)), fit: BoxFit.cover);
+    } else if (_photoUrl != null) {
+      bgImage = DecorationImage(
+          image: CachedNetworkImageProvider(_photoUrl!), fit: BoxFit.cover);
+    } else if (_imageBg != null) {
+      bgImage = DecorationImage(
+          image: AssetImage(ImageBackgrounds.all[_imageBg!]), fit: BoxFit.cover);
+    } else if (_texture != null) {
+      bgImage = DecorationImage(
+          image: AssetImage(Textures.all[_texture!]), fit: BoxFit.cover);
+    }
+
     final sig = state.customSignature.isNotEmpty
         ? state.customSignature
         : (state.canRemoveWatermark ? '' : '🌸 Frases Bonitas');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Criar (Editor PRO)')),
+      appBar: AppBar(title: const Text('Criar (Editor)')),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
-            16, 12, 16, 28 + MediaQuery.of(context).viewPadding.bottom),
+            16, 12, 16, 28 + MediaQuery.of(context).padding.bottom),
         children: [
           // ---- Pré-visualização (vira a imagem) ----
           Center(
@@ -261,28 +274,21 @@ class _CreateScreenState extends State<CreateScreen> {
                   key: _cardKey,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: (_photoPath == null && !bg.isImage)
-                          ? AppTheme.gradient(bg.colors)
-                          : null,
-                      image: _photoPath != null
-                          ? DecorationImage(
-                              image: FileImage(File(_photoPath!)),
-                              fit: BoxFit.cover)
-                          : (bg.isImage
-                              ? DecorationImage(
-                                  image: AssetImage(bg.asset!),
-                                  fit: BoxFit.cover)
-                              : null),
+                      gradient:
+                          bgImage == null ? AppTheme.gradient(bg.colors) : null,
+                      image: bgImage,
                     ),
                     child: Stack(
                       children: [
-                        if (_photoPath != null)
+                        if (hasPhotoOverlay)
                           Container(color: Colors.black.withValues(alpha: 0.28)),
+                        if (filterColor != null)
+                          Positioned.fill(child: Container(color: filterColor)),
                         Center(
                           child: Padding(
                             padding: const EdgeInsets.all(22),
-                            child:
-                                Text(text, textAlign: TextAlign.center, style: _font_(color)),
+                            child: Text(text,
+                                textAlign: TextAlign.center, style: _font_(color)),
                           ),
                         ),
                         if (sig.isNotEmpty)
@@ -321,25 +327,21 @@ class _CreateScreenState extends State<CreateScreen> {
           ),
           const SizedBox(height: 16),
 
-          _proLabel(context, 'Formato', pro),
+          _label(context, 'Formato'),
           Wrap(
             spacing: 8,
             children: [
               for (var i = 0; i < _formats.length; i++)
                 ChoiceChip(
-                  avatar: (i > 0 && !pro)
-                      ? const Icon(Icons.lock_rounded, size: 14)
-                      : null,
                   label: Text(_formats[i].label),
                   selected: _format == i,
-                  onSelected: (_) =>
-                      (i > 0 && !pro) ? _unlock(state) : setState(() => _format = i),
+                  onSelected: (_) => setState(() => _format = i),
                 ),
             ],
           ),
           const SizedBox(height: 14),
 
-          _proLabel(context, 'Fontes', pro),
+          _label(context, 'Fontes'),
           SizedBox(
             height: 44,
             child: ListView.separated(
@@ -347,36 +349,29 @@ class _CreateScreenState extends State<CreateScreen> {
               itemCount: _fonts.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) {
-                final locked = i > 0 && !pro;
                 final sel = _font == i;
                 return ActionChip(
                   label: Text('Aa',
                       style: GoogleFonts.getFont(_fonts[i],
                           fontWeight: sel ? FontWeight.w800 : FontWeight.w500)),
-                  avatar: locked
-                      ? const Icon(Icons.lock_rounded, size: 14)
-                      : null,
                   backgroundColor: sel
                       ? Theme.of(context).colorScheme.primaryContainer
                       : null,
-                  onPressed: () =>
-                      locked ? _unlock(state) : setState(() => _font = i),
+                  onPressed: () => setState(() => _font = i),
                 );
               },
             ),
           ),
           const SizedBox(height: 14),
 
-          _proLabel(context, 'Cor do texto', pro),
+          _label(context, 'Cor do texto'),
           Row(
             children: [
               for (var i = 0; i < _colors.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(right: 10),
                   child: GestureDetector(
-                    onTap: () => (i > 1 && !pro)
-                        ? _unlock(state)
-                        : setState(() => _color = i),
+                    onTap: () => setState(() => _color = i),
                     child: Container(
                       width: 34,
                       height: 34,
@@ -389,10 +384,6 @@ class _CreateScreenState extends State<CreateScreen> {
                                 : Colors.black26,
                             width: _color == i ? 3 : 1),
                       ),
-                      child: (i > 1 && !pro)
-                          ? const Icon(Icons.lock_rounded,
-                              size: 14, color: Colors.black54)
-                          : null,
                     ),
                   ),
                 ),
@@ -400,7 +391,8 @@ class _CreateScreenState extends State<CreateScreen> {
           ),
           const SizedBox(height: 14),
 
-          _proLabel(context, 'Fundo', pro),
+          // ---- Fundos (gradientes) ----
+          _label(context, 'Fundos'),
           SizedBox(
             height: 56,
             child: ListView.separated(
@@ -409,33 +401,99 @@ class _CreateScreenState extends State<CreateScreen> {
               separatorBuilder: (_, _) => const SizedBox(width: 10),
               itemBuilder: (context, i) {
                 final b = StoryBg.all[i];
-                final locked = b.premium && !pro;
+                final sel = !hasPhotoOverlay &&
+                    _imageBg == null &&
+                    _texture == null &&
+                    _bg == i;
                 return GestureDetector(
-                  onTap: () => locked
-                      ? _unlock(state)
-                      : setState(() {
-                          _bg = i;
-                          _photoPath = null;
-                        }),
+                  onTap: () => setState(() {
+                    _bg = i;
+                    _clearImages();
+                  }),
                   child: Container(
                     width: 48,
                     decoration: BoxDecoration(
-                      gradient: b.isImage ? null : AppTheme.gradient(b.colors),
-                      image: b.isImage
-                          ? DecorationImage(
-                              image: AssetImage(b.asset!), fit: BoxFit.cover)
-                          : null,
+                      gradient: AppTheme.gradient(b.colors),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: (_photoPath == null && _bg == i)
+                          color: sel
                               ? Theme.of(context).colorScheme.primary
                               : Colors.transparent,
                           width: 3),
                     ),
-                    child: locked
-                        ? const Icon(Icons.lock_rounded,
-                            color: Colors.white, size: 16)
-                        : null,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // ---- Fundos-imagem (offline) ----
+          _label(context, 'Fundos-imagem'),
+          SizedBox(
+            height: 64,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: ImageBackgrounds.all.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final sel = _imageBg == i;
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _clearImages();
+                    _imageBg = i;
+                  }),
+                  child: Container(
+                    width: 48,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: Colors.black12,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: sel
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 3),
+                      image: DecorationImage(
+                          image: AssetImage(ImageBackgrounds.all[i]),
+                          fit: BoxFit.cover),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // ---- Texturas (offline) ----
+          _label(context, 'Texturas'),
+          SizedBox(
+            height: 64,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: Textures.all.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final sel = _texture == i;
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _clearImages();
+                    _texture = i;
+                  }),
+                  child: Container(
+                    width: 48,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: Colors.black12,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: sel
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 3),
+                      image: DecorationImage(
+                          image: AssetImage(Textures.all[i]), fit: BoxFit.cover),
+                    ),
                   ),
                 );
               },
@@ -443,23 +501,107 @@ class _CreateScreenState extends State<CreateScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ---- Ações PRO ----
+          // ---- Fotos reais (Unsplash, grátis) ----
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Text('Fotos reais',
+                    style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF16A34A),
+                      borderRadius: BorderRadius.circular(20)),
+                  child: const Text('GRÁTIS',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800)),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 64,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: photoBackgrounds.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final pb = photoBackgrounds[i];
+                final sel = _photoUrl == pb.full;
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _clearImages();
+                    _photoUrl = pb.full;
+                  }),
+                  child: Container(
+                    width: 48,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: Colors.black12,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: sel
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 3),
+                    ),
+                    child: CachedNetworkImage(
+                      imageUrl: pb.thumb,
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) => const Center(
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      errorWidget: (_, _, _) => const Icon(
+                          Icons.wifi_off_rounded,
+                          size: 16,
+                          color: Colors.black38),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // ---- Filtro de cor ----
+          _label(context, 'Filtro'),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (var i = 0; i < CardFilters.names.length; i++)
+                ChoiceChip(
+                  label: Text(CardFilters.names[i]),
+                  selected: _filter == i,
+                  onSelected: (_) => setState(() => _filter = i),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ---- Ações ----
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => pro ? _pickPhoto() : _unlock(state),
-                  icon: Icon(pro
-                      ? Icons.add_photo_alternate_rounded
-                      : Icons.lock_rounded),
+                  onPressed: _pickPhoto,
+                  icon: const Icon(Icons.add_photo_alternate_rounded),
                   label: const Text('Sua foto'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => pro ? _editSignature(state) : _unlock(state),
-                  icon: Icon(pro ? Icons.draw_rounded : Icons.lock_rounded),
+                  onPressed: () => _editSignature(state),
+                  icon: const Icon(Icons.draw_rounded),
                   label: const Text('Assinatura'),
                 ),
               ),
@@ -478,8 +620,8 @@ class _CreateScreenState extends State<CreateScreen> {
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: _busy ? null : () => pro ? _saveGallery() : _unlock(state),
-            icon: Icon(pro ? Icons.download_rounded : Icons.lock_rounded),
+            onPressed: _busy ? null : _saveGallery,
+            icon: const Icon(Icons.download_rounded),
             label: const Text('Salvar na galeria (HD)'),
           ),
           const SizedBox(height: 10),
@@ -487,7 +629,7 @@ class _CreateScreenState extends State<CreateScreen> {
             onPressed: () {
               final t = _controller.text.trim();
               if (t.isNotEmpty) {
-                Share.share('$t\n\n🎂 ${AppInfo.appName}\n${AppInfo.shareFooter}');
+                Share.share('$t\n\n🌸 Frases Bonitas');
               }
             },
             icon: const Icon(Icons.text_fields_rounded),
@@ -498,25 +640,8 @@ class _CreateScreenState extends State<CreateScreen> {
     );
   }
 
-  Widget _proLabel(BuildContext context, String t, bool pro) => Padding(
+  Widget _label(BuildContext context, String t) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          children: [
-            Text(t, style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(width: 8),
-            if (!pro)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    borderRadius: BorderRadius.circular(20)),
-                child: const Text('PRO',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800)),
-              ),
-          ],
-        ),
+        child: Text(t, style: Theme.of(context).textTheme.titleSmall),
       );
 }

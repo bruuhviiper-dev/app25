@@ -7,7 +7,7 @@ import '../screens/create_screen.dart';
 import '../services/app_state.dart';
 import 'share_helper.dart';
 
-/// Cartão de um versículo, com ações de favoritar, copiar e compartilhar.
+/// Cartão de uma frase, com favoritar, editar, copiar e compartilhar.
 class VerseTile extends StatelessWidget {
   const VerseTile({super.key, required this.verse});
 
@@ -18,8 +18,6 @@ class VerseTile extends StatelessWidget {
     final state = context.watch<AppState>();
     final fav = state.isFavorite(verse.id);
     final scheme = Theme.of(context).colorScheme;
-    final shownText = state.personalize(verse.text);
-    final shareText = state.personalize(verse.shareText);
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Padding(
@@ -27,7 +25,7 @@ class VerseTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(shownText,
+            Text(verse.text,
                 style: GoogleFonts.lora(fontSize: 16, height: 1.5)),
             if (verse.reference.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -47,25 +45,23 @@ class VerseTile extends StatelessWidget {
                 IconButton(
                   tooltip: 'Editar',
                   icon: const Icon(Icons.edit_rounded),
-                  onPressed: () => _edit(context, shownText),
+                  onPressed: () => _edit(context, verse.text),
                 ),
                 IconButton(
                   tooltip: 'Criar imagem',
                   icon: const Icon(Icons.image_rounded),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => CreateScreen(initialText: shownText),
-                    ),
-                  ),
+                  onPressed: () => Navigator.of(context, rootNavigator: true)
+                      .push(MaterialPageRoute(
+                          builder: (_) => CreateScreen(initialText: verse.text))),
                 ),
                 IconButton(
                   tooltip: 'Copiar',
                   icon: const Icon(Icons.copy_rounded),
                   onPressed: () async {
-                    await ShareHelper.copy(shareText);
+                    await ShareHelper.copy(verse.shareText);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Mensagem copiada!')),
+                        const SnackBar(content: Text('Copiado!')),
                       );
                     }
                   },
@@ -74,7 +70,7 @@ class VerseTile extends StatelessWidget {
                 IconButton(
                   tooltip: 'Compartilhar',
                   icon: const Icon(Icons.share_rounded),
-                  onPressed: () => ShareHelper.share(shareText),
+                  onPressed: () => ShareHelper.share(verse.shareText),
                 ),
               ],
             ),
@@ -84,7 +80,7 @@ class VerseTile extends StatelessWidget {
     );
   }
 
-  /// Permite editar a mensagem (ex.: pôr o nome) antes de copiar/compartilhar.
+  /// Editar a frase antes de copiar/compartilhar (autonomia do usuário).
   void _edit(BuildContext context, String initial) {
     final c = TextEditingController(text: initial);
     showModalBottomSheet(
@@ -92,15 +88,19 @@ class VerseTile extends StatelessWidget {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            16, 0, 16, MediaQuery.of(ctx).viewInsets.bottom + 16),
-        child: Column(
+        // Teclado empurra o conteudo pra cima...
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        // ...e o SafeArea garante espaco pra barra de navegacao (edge-to-edge).
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Padding(
               padding: EdgeInsets.only(bottom: 8),
-              child: Text('Editar mensagem',
+              child: Text('Editar frase',
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             ),
             TextField(
@@ -143,6 +143,7 @@ class VerseTile extends StatelessWidget {
               ],
             ),
           ],
+          ),
         ),
       ),
     );

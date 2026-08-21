@@ -11,7 +11,7 @@ class AdsService with WidgetsBindingObserver {
   AdsService._();
   static final AdsService instance = AdsService._();
 
-  static const bool _useTestAds = true;
+  static const bool _useTestAds = false;
 
   // IDs de TESTE oficiais do Google
   static const _testBanner = 'ca-app-pub-3940256099942544/6300978111';
@@ -31,6 +31,10 @@ class AdsService with WidgetsBindingObserver {
 
   /// Setado pelo banner (lê o AppState): usuário pagante não vê anúncios.
   bool adsRemoved = false;
+
+  /// Política "só banner": intersticial e app-open DESLIGADOS. Reversível.
+  bool interstitialEnabled = false;
+  bool appOpenEnabled = false;
 
   InterstitialAd? _interstitial;
   bool _loadingInterstitial = false;
@@ -56,8 +60,8 @@ class AdsService with WidgetsBindingObserver {
     _initialized = true;
     MobileAds.instance.initialize();
     WidgetsBinding.instance.addObserver(this);
-    _preloadInterstitial();
-    _loadAppOpen();
+    if (interstitialEnabled) _preloadInterstitial();
+    if (appOpenEnabled) _loadAppOpen();
   }
 
   @override
@@ -128,6 +132,7 @@ class AdsService with WidgetsBindingObserver {
   /// Conta uma ação relevante e exibe o intersticial ao atingir o limite
   /// (intervalo mínimo de 60s). Não exibe pra quem removeu anúncios.
   void registerActionAndMaybeShow() {
+    if (!interstitialEnabled) return;
     if (!_supported || adsRemoved || _showingFullScreenAd) return;
     _actionsSinceLastAd++;
     if (_actionsSinceLastAd < interstitialEvery) return;
@@ -176,6 +181,7 @@ class AdsService with WidgetsBindingObserver {
   }
 
   void maybeShowAppOpen() {
+    if (!appOpenEnabled) return;
     if (!_supported || adsRemoved || _showingFullScreenAd) return;
     final now = DateTime.now();
     if (_lastAppOpenShown != null &&

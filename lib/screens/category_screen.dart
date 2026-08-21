@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/models.dart';
 import '../widgets/verse_tile.dart';
 
-/// Lista de versículos de uma categoria.
+/// Lista de frases de uma categoria. O banner fica no shell (rodapé fixo) e a
+/// barra de navegação permanece visível (navegadores aninhados por aba).
 class CategoryScreen extends StatelessWidget {
   const CategoryScreen({super.key, required this.category});
 
@@ -13,10 +14,13 @@ class CategoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('${category.emoji}  ${category.name}')),
-      body: ListView.builder(
-        padding: const EdgeInsets.only(top: 12, bottom: 24),
-        itemCount: category.verses.length,
-        itemBuilder: (context, i) => VerseTile(verse: category.verses[i]),
+      body: SafeArea(
+        top: false,
+        child: ListView.builder(
+          padding: const EdgeInsets.only(top: 12, bottom: 24),
+          itemCount: category.verses.length,
+          itemBuilder: (context, i) => VerseTile(verse: category.verses[i]),
+        ),
       ),
     );
   }

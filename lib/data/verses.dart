@@ -539,6 +539,17 @@ class VerseData {
 
   static List<Verse> get all => [for (final c in categories) ...c.verses];
 
+  /// Frase do dia determinística (muda a cada dia, estável no mesmo dia).
+  /// Usada no card do topo e na notificação — mantém os dois em sincronia.
+  static String ofDay([DateTime? date]) {
+    final list = freeVerses.isNotEmpty ? freeVerses : all;
+    if (list.isEmpty) return '';
+    final d = date ?? DateTime.now();
+    final dayIndex =
+        DateTime(d.year, d.month, d.day).difference(DateTime(2020, 1, 1)).inDays;
+    return list[(dayIndex.abs() * 7919) % list.length].text;
+  }
+
   static List<Verse> get freeVerses =>
       [for (final c in categories) if (!c.premium) ...c.verses];
 

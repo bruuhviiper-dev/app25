@@ -1,14 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Splash da marca (Frases Bonitas). Fundo dourado-celestial em
-/// gradiente com a assinatura da Phantom Tecnologia. É
-/// desenhada por cima do app e esmaece (sem "piscar"), ver _RootGate no main.
-class SplashScreen extends StatelessWidget {
+import '../data/app_info.dart';
+
+/// Abertura da marca (Frases Bonitas) — fundo rosa em gradiente, com animação de
+/// escala/fade. Desenhada por cima do app e esmaece (sem "piscar"), ver
+/// _RootGate no main. SafeArea garante que a assinatura não encoste na barra de
+/// navegação (edge-to-edge).
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final logoScale = CurvedAnimation(parent: _c, curve: Curves.elasticOut);
+    final fade = CurvedAnimation(
+      parent: _c,
+      curve: const Interval(0.12, 0.45, curve: Curves.easeOut),
+    );
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -18,66 +44,80 @@ class SplashScreen extends StatelessWidget {
             colors: [Color(0xFFFF758C), Color(0xFFFF7EB3)],
           ),
         ),
-        child: Stack(
-          children: [
-            Center(
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      Colors.white.withValues(alpha: 0.28),
-                      Colors.transparent,
-                    ],
+        child: SafeArea(
+          child: Stack(
+            children: [
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ScaleTransition(
+                      scale: logoScale,
+                      child: Container(
+                        width: 160,
+                        height: 160,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              Colors.white.withValues(alpha: 0.3),
+                              Colors.white.withValues(alpha: 0.0),
+                            ],
+                          ),
+                        ),
+                        child: const Text('🌸', style: TextStyle(fontSize: 92)),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    FadeTransition(
+                      opacity: fade,
+                      child: Text(
+                        'Frases Bonitas',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    FadeTransition(
+                      opacity: fade,
+                      child: Text(
+                        'frases lindas pra compartilhar ✨',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: const Color(0xFFFFF1F6),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: FadeTransition(
+                  opacity: fade,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 22),
+                    child: Text(
+                      'por ${AppInfo.developer}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.5,
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('🌸', style: TextStyle(fontSize: 96)),
-                  const SizedBox(height: 22),
-                  Text(
-                    'Frases Bonitas',
-                    style: GoogleFonts.poppins(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'inspiração pra cada dia ✨',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: const Color(0xFFFFF6DA),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 46),
-                child: Text(
-                  'por Phantom Tecnologia',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.82),
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
