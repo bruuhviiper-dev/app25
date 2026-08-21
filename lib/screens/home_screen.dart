@@ -25,12 +25,8 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Frases Bonitas'),
+        titleSpacing: 12,
         actions: [
-          IconButton(
-            tooltip: 'Cores do app',
-            icon: const Icon(Icons.palette_rounded),
-            onPressed: () => _showThemePicker(context),
-          ),
           if (!state.adsRemoved)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
@@ -49,11 +45,9 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           IconButton(
-            tooltip: state.isDark ? 'Modo claro' : 'Modo escuro',
-            icon: Icon(state.isDark
-                ? Icons.light_mode_rounded
-                : Icons.dark_mode_rounded),
-            onPressed: () => context.read<AppState>().toggleTheme(),
+            tooltip: 'Cores e tema',
+            icon: const Icon(Icons.palette_rounded),
+            onPressed: () => _showThemePicker(context),
           ),
         ],
       ),
@@ -129,7 +123,19 @@ void _showThemePicker(BuildContext context) {
             const SizedBox(height: 4),
             const Text('Personalize as cores do app — tudo grátis.',
                 style: TextStyle(fontSize: 12.5, color: Colors.grey)),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            Consumer<AppState>(
+              builder: (c, s, _) => SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                secondary: Icon(s.isDark
+                    ? Icons.dark_mode_rounded
+                    : Icons.light_mode_rounded),
+                title: const Text('Modo escuro'),
+                value: s.isDark,
+                onChanged: (_) => s.toggleTheme(),
+              ),
+            ),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 14,
               runSpacing: 14,
