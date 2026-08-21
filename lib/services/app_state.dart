@@ -25,7 +25,7 @@ class AppState extends ChangeNotifier {
   static const _kTempPro = 'temp_pro_until';
   static const _kRecipient = 'recipient_name';
 
-  static const String pRemoveAds = 'remove_ads';
+  static const String pRemoveAds = 'no_ads';
   static const String pWatermark = 'remove_watermark';
   static const String pBundle = 'premium_bundle';
   static const String pPack = 'pack_oracoes';
@@ -121,14 +121,13 @@ class AppState extends ChangeNotifier {
   bool get adsRemoved =>
       _entitlements.contains(pRemoveAds) || hasBundle;
 
-  /// Pode compartilhar imagens sem a marca d'água (assinatura).
-  bool get canRemoveWatermark =>
-      _entitlements.contains(pWatermark) || hasBundle || hasTemporaryPro;
+  /// Sem marca d'água: grátis pra todos (editor 100% livre).
+  bool get canRemoveWatermark => true;
 
-  /// Tem acesso às categorias exclusivas (pacote, bundle ou assinatura).
-  bool get ownsExclusivePack => ownsProduct(pPack) || hasTemporaryPro;
+  /// Todas as categorias são grátis (sem bloqueio/cadeado).
+  bool get ownsExclusivePack => true;
 
-  bool isCategoryLocked(bool premium) => premium && !ownsExclusivePack;
+  bool isCategoryLocked(bool premium) => false;
 
   // ----- temas -----
   AppPalette get palette => AppPalettes.byId(_paletteId);
@@ -137,12 +136,8 @@ class AppState extends ChangeNotifier {
   bool get hasTemporaryThemes =>
       _tempThemesUntil != null && _tempThemesUntil!.isAfter(DateTime.now());
 
-  bool ownsPalette(String paletteId) {
-    final p = AppPalettes.byId(paletteId);
-    if (!p.premium) return true;
-    if (hasTemporaryThemes || isPremium || hasTemporaryPro) return true;
-    return p.productId != null && ownsProduct(p.productId!);
-  }
+  /// Todos os temas são grátis (personalização liberada pra todos).
+  bool ownsPalette(String paletteId) => true;
 
   void _load() {
     _favorites.addAll(_prefs.getStringList(_kFavorites) ?? const []);

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/app_palettes.dart';
 import '../data/app_theme.dart';
 import '../data/models.dart';
 import '../data/story_backgrounds.dart';
@@ -25,6 +26,11 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Frases Bonitas'),
         actions: [
+          IconButton(
+            tooltip: 'Cores do app',
+            icon: const Icon(Icons.palette_rounded),
+            onPressed: () => _showThemePicker(context),
+          ),
           if (!state.adsRemoved)
             IconButton(
               tooltip: 'Remover anúncios',
@@ -34,7 +40,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           IconButton(
-            tooltip: 'Tema',
+            tooltip: state.isDark ? 'Modo claro' : 'Modo escuro',
             icon: Icon(state.isDark
                 ? Icons.light_mode_rounded
                 : Icons.dark_mode_rounded),
@@ -71,6 +77,95 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Seletor de temas (cores do app) — todos GRÁTIS. Aplica na hora.
+void _showThemePicker(BuildContext context) {
+  final state = context.read<AppState>();
+  showModalBottomSheet(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.palette_rounded, size: 20),
+                const SizedBox(width: 8),
+                Text('Escolha o tema',
+                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text('Personalize as cores do app — tudo grátis.',
+                style: TextStyle(fontSize: 12.5, color: Colors.grey)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 14,
+              runSpacing: 14,
+              children: [
+                for (final p in AppPalettes.all)
+                  GestureDetector(
+                    onTap: () {
+                      context.read<AppState>().setPalette(p.id);
+                      Navigator.pop(ctx);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: p.gradient,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: state.palette.id == p.id
+                                  ? p.accent
+                                  : Colors.black12,
+                              width: state.palette.id == p.id ? 4 : 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: p.accent.withValues(alpha: 0.35),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4)),
+                            ],
+                          ),
+                          child: state.palette.id == p.id
+                              ? const Icon(Icons.check_rounded,
+                                  color: Colors.white, size: 26)
+                              : null,
+                        ),
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          width: 72,
+                          child: Text(p.name,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _MessageOfDay extends StatefulWidget {

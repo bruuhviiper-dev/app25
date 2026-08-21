@@ -31,7 +31,7 @@ class StoreProducts {
   StoreProducts._();
 
   static const removeAds = StoreProduct(
-    id: 'remove_ads',
+    id: 'no_ads',
     kind: ProductKind.removeAds,
     title: 'Remover anúncios',
     description: 'Use o app sem interrupções. Pagamento único.',
@@ -84,12 +84,8 @@ class StoreProducts {
     emoji: '👑',
   );
 
-  /// Categorias bloqueadas até comprar o pacote (ou bundle/assinatura).
-  static const Set<String> exclusiveCategoryIds = {
-    'poderosas',
-    'forca',
-    'suplicas',
-  };
+  /// Nenhuma categoria bloqueada — todo o conteúdo é grátis.
+  static const Set<String> exclusiveCategoryIds = {};
 
   static const Set<String> subscriptionIds = {
     'premium_monthly',
@@ -110,15 +106,8 @@ class StoreProducts {
             ),
       ];
 
-  static List<StoreProduct> get all => [
-        removeAds,
-        removeWatermark,
-        packExclusivas,
-        premiumBundle,
-        premiumMonthly,
-        premiumYearly,
-        ...themes,
-      ];
+  /// Único produto à venda: remover anúncios (compra única). Todo o resto grátis.
+  static List<StoreProduct> get all => [removeAds];
 
   static StoreProduct? byId(String id) {
     for (final p in all) {

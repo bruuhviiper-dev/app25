@@ -143,6 +143,8 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.watch<AppState>().accentColor;
+    final surface = Theme.of(context).colorScheme.surface;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -170,19 +172,47 @@ class _HomeShellState extends State<HomeShell> {
             const BannerPlaceholder(),
           ],
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (i) {
-            if (i == _index) {
-              _navKeys[i].currentState?.popUntil((r) => r.isFirst);
-            } else {
-              setState(() => _index = i);
-            }
-            if (!context.read<AppState>().adsRemoved) {
-              AdsService.instance.registerActionAndMaybeShow();
-            }
-          },
-          destinations: const [
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                  color: accent.withValues(alpha: 0.20),
+                  blurRadius: 22,
+                  offset: const Offset(0, -3)),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: NavigationBarTheme(
+              data: NavigationBarThemeData(
+                backgroundColor: surface,
+                elevation: 0,
+                indicatorColor: accent.withValues(alpha: 0.18),
+                labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: s.contains(WidgetState.selected)
+                        ? FontWeight.w800
+                        : FontWeight.w500,
+                    color: s.contains(WidgetState.selected) ? accent : null)),
+                iconTheme: WidgetStateProperty.resolveWith((s) => IconThemeData(
+                    color: s.contains(WidgetState.selected) ? accent : null)),
+              ),
+              child: NavigationBar(
+                selectedIndex: _index,
+                height: 66,
+                onDestinationSelected: (i) {
+                  if (i == _index) {
+                    _navKeys[i].currentState?.popUntil((r) => r.isFirst);
+                  } else {
+                    setState(() => _index = i);
+                  }
+                  if (!context.read<AppState>().adsRemoved) {
+                    AdsService.instance.registerActionAndMaybeShow();
+                  }
+                },
+                destinations: const [
             NavigationDestination(
                 icon: Icon(Icons.home_outlined),
                 selectedIcon: Icon(Icons.home_rounded),
@@ -203,7 +233,10 @@ class _HomeShellState extends State<HomeShell> {
                 icon: Icon(Icons.more_horiz_rounded),
                 selectedIcon: Icon(Icons.more_horiz_rounded),
                 label: 'Mais'),
-          ],
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

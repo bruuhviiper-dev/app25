@@ -7,7 +7,7 @@ class AppPalette {
     required this.name,
     required this.accent,
     required this.gradient,
-    this.premium = true,
+    this.premium = false,
     this.productId,
   });
 
