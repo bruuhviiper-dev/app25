@@ -19,6 +19,7 @@ import '../data/photo_backgrounds.dart';
 import '../data/procedural_bg.dart';
 import '../data/story_backgrounds.dart';
 import '../data/textures.dart';
+import '../services/ads_service.dart';
 import '../services/app_state.dart';
 
 /// Editor PRO: cria uma frase como imagem (formatos, fontes, cores, fundos,
@@ -95,6 +96,12 @@ class _CreateScreenState extends State<CreateScreen> {
     'Bebas Neue',
     'Playfair Display',
   ];
+
+  // Fontes livres (as 4 primeiras). As demais fazem parte do "Pack Criativos+",
+  // liberado por 24h assistindo um vídeo (opt-in, nada bloqueante).
+  static const _freeFontCount = 4;
+  // Quantos fundos Criativos aparecem sem o pack (com o pack, o dobro).
+  static const _freeCriativos = 60;
   static const _colors = [
     Colors.white,
     Colors.black,
@@ -239,6 +246,7 @@ class _CreateScreenState extends State<CreateScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final pro = state.hasTemporaryPro; // Pack Criativos+ ativo (24h)?
     final bg = StoryBg.all[_bg];
     final color = _colors[_color];
     final filterColor = CardFilters.color(_filter);
@@ -364,14 +372,20 @@ class _CreateScreenState extends State<CreateScreen> {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) {
                 final sel = _font == i;
+                final locked = i >= _freeFontCount && !pro;
                 return ActionChip(
+                  avatar: locked
+                      ? const Icon(Icons.play_circle_fill_rounded, size: 18)
+                      : null,
                   label: Text('Aa',
                       style: GoogleFonts.getFont(_fonts[i],
                           fontWeight: sel ? FontWeight.w800 : FontWeight.w500)),
                   backgroundColor: sel
                       ? Theme.of(context).colorScheme.primaryContainer
                       : null,
-                  onPressed: () => setState(() => _font = i),
+                  onPressed: () => locked
+                      ? _offerRewarded()
+                      : setState(() => _font = i),
                 );
               },
             ),
@@ -466,9 +480,32 @@ class _CreateScreenState extends State<CreateScreen> {
             height: 56,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: 60,
+              itemCount: pro ? _freeCriativos * 2 : _freeCriativos + 1,
               separatorBuilder: (_, _) => const SizedBox(width: 10),
               itemBuilder: (context, i) {
+                // Tile de "desbloquear +" (só quando o pack não está ativo).
+                if (!pro && i == _freeCriativos) {
+                  return GestureDetector(
+                    onTap: _offerRewarded,
+                    child: Container(
+                      width: 60,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.play_circle_fill_rounded, size: 20),
+                          SizedBox(height: 2),
+                          Text('+ mais',
+                              style: TextStyle(
+                                  fontSize: 10, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
                 final sel = _seed == i;
                 return GestureDetector(
                   onTap: () => setState(() {
@@ -702,6 +739,65 @@ class _CreateScreenState extends State<CreateScreen> {
             label: const Text('Compartilhar texto'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Oferece liberar o "Pack Criativos+" (fontes premium + mais fundos) por 24h
+  /// assistindo um vídeo. Opt-in, aberto só quando o usuário toca num item.
+  void _offerRewarded() {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.auto_awesome_rounded, size: 20),
+                  const SizedBox(width: 8),
+                  Text('Pack Criativos+',
+                      style: Theme.of(ctx)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                  'Libere as fontes premium e o dobro de fundos Criativos por 24h. '
+                  'É grátis: basta assistir um vídeo rápido. Sem assinatura.',
+                  style: TextStyle(fontSize: 13.5, height: 1.4)),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final ok = await AdsService.instance.showRewarded(() {
+                      context
+                          .read<AppState>()
+                          .grantTemporaryPro(const Duration(hours: 24));
+                    });
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(SnackBar(
+                          content: Text(ok
+                              ? 'Liberado por 24h! Aproveite 🎉'
+                              : 'Vídeo indisponível agora, tente em instantes.')));
+                  },
+                  icon: const Icon(Icons.play_circle_fill_rounded),
+                  label: const Text('Assistir vídeo (grátis)'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
