@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -15,6 +16,7 @@ import 'package:share_plus/share_plus.dart';
 import '../data/app_theme.dart';
 import '../data/image_backgrounds.dart';
 import '../data/photo_backgrounds.dart';
+import '../data/procedural_bg.dart';
 import '../data/story_backgrounds.dart';
 import '../data/textures.dart';
 import '../services/app_state.dart';
@@ -30,6 +32,7 @@ class CreateScreen extends StatefulWidget {
     this.initialImageBg,
     this.initialTexture,
     this.initialPhotoUrl,
+    this.initialSeed,
   });
 
   /// Texto inicial — abre o editor já com a frase escolhida.
@@ -46,6 +49,9 @@ class CreateScreen extends StatefulWidget {
 
   /// Foto real inicial (URL do photo_backgrounds).
   final String? initialPhotoUrl;
+
+  /// Fundo PROCEDURAL inicial (seed em ProceduralPainter).
+  final int? initialSeed;
 
   @override
   State<CreateScreen> createState() => _CreateScreenState();
@@ -69,6 +75,7 @@ class _CreateScreenState extends State<CreateScreen> {
   String? _photoUrl; // foto real (Unsplash)
   int? _imageBg; // fundo-imagem offline
   int? _texture; // textura offline
+  int? _seed; // fundo procedural (gerado no aparelho)
   int _filter = 0; // filtro de cor
   bool _busy = false;
 
@@ -111,6 +118,7 @@ class _CreateScreenState extends State<CreateScreen> {
     if (widget.initialImageBg != null) _imageBg = widget.initialImageBg;
     if (widget.initialTexture != null) _texture = widget.initialTexture;
     if (widget.initialPhotoUrl != null) _photoUrl = widget.initialPhotoUrl;
+    if (widget.initialSeed != null) _seed = widget.initialSeed;
   }
 
   @override
@@ -219,12 +227,13 @@ class _CreateScreenState extends State<CreateScreen> {
         ],
       );
 
-  /// Limpa qualquer fundo-imagem/foto (volta pro gradiente).
+  /// Limpa qualquer fundo-imagem/foto/procedural (volta pro gradiente).
   void _clearImages() {
     _photoPath = null;
     _photoUrl = null;
     _imageBg = null;
     _texture = null;
+    _seed = null;
   }
 
   @override
@@ -274,12 +283,17 @@ class _CreateScreenState extends State<CreateScreen> {
                   key: _cardKey,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient:
-                          bgImage == null ? AppTheme.gradient(bg.colors) : null,
+                      gradient: (bgImage == null && _seed == null)
+                          ? AppTheme.gradient(bg.colors)
+                          : null,
                       image: bgImage,
                     ),
                     child: Stack(
                       children: [
+                        if (_seed != null)
+                          Positioned.fill(
+                              child: CustomPaint(
+                                  painter: ProceduralPainter(_seed!))),
                         if (hasPhotoOverlay)
                           Container(color: Colors.black.withValues(alpha: 0.28)),
                         if (filterColor != null)
@@ -404,6 +418,7 @@ class _CreateScreenState extends State<CreateScreen> {
                 final sel = !hasPhotoOverlay &&
                     _imageBg == null &&
                     _texture == null &&
+                    _seed == null &&
                     _bg == i;
                 return GestureDetector(
                   onTap: () => setState(() {
@@ -421,6 +436,57 @@ class _CreateScreenState extends State<CreateScreen> {
                               : Colors.transparent,
                           width: 3),
                     ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // ---- Criativos (fundos procedurais, gerados no aparelho) ----
+          Row(
+            children: [
+              Text('Criativos', style: Theme.of(context).textTheme.titleSmall),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => setState(() {
+                  _clearImages();
+                  _seed = math.Random().nextInt(ProceduralBg.variety);
+                }),
+                icon: const Icon(Icons.shuffle_rounded, size: 18),
+                label: const Text('Surpreenda'),
+                style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 56,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: 60,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final sel = _seed == i;
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _clearImages();
+                    _seed = i;
+                  }),
+                  child: Container(
+                    width: 48,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: sel
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 3),
+                    ),
+                    child: CustomPaint(painter: ProceduralPainter(i)),
                   ),
                 );
               },

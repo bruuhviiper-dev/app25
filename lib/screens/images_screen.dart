@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../data/image_backgrounds.dart';
 import '../data/photo_backgrounds.dart';
+import '../data/procedural_bg.dart';
 import '../data/textures.dart';
 import '../data/verses.dart';
 import 'create_screen.dart';
@@ -18,7 +19,7 @@ class ImagesScreen extends StatefulWidget {
   State<ImagesScreen> createState() => _ImagesScreenState();
 }
 
-enum _Kind { fundos, texturas, fotos }
+enum _Kind { fundos, texturas, fotos, criativos }
 
 class _ImagesScreenState extends State<ImagesScreen> {
   _Kind _kind = _Kind.fundos;
@@ -27,6 +28,7 @@ class _ImagesScreenState extends State<ImagesScreen> {
         _Kind.fundos => ImageBackgrounds.all.length,
         _Kind.texturas => Textures.all.length,
         _Kind.fotos => photoBackgrounds.length,
+        _Kind.criativos => ProceduralBg.variety,
       };
 
   // Frases curadas (grátis) para as prévias.
@@ -40,12 +42,15 @@ class _ImagesScreenState extends State<ImagesScreen> {
         _Kind.texturas => CreateScreen(initialText: text, initialTexture: i),
         _Kind.fotos =>
           CreateScreen(initialText: text, initialPhotoUrl: photoBackgrounds[i].full),
+        _Kind.criativos => CreateScreen(initialText: text, initialSeed: i),
       },
     ));
   }
 
   Widget _bg(int i) {
     switch (_kind) {
+      case _Kind.criativos:
+        return CustomPaint(painter: ProceduralPainter(i), size: Size.infinite);
       case _Kind.fundos:
         return Image.asset(ImageBackgrounds.all[i], fit: BoxFit.cover);
       case _Kind.texturas:
@@ -92,6 +97,7 @@ class _ImagesScreenState extends State<ImagesScreen> {
                           _Kind.fundos => 'Fundos',
                           _Kind.texturas => 'Texturas',
                           _Kind.fotos => 'Fotos reais',
+                          _Kind.criativos => 'Criativos',
                         }),
                         selected: _kind == k,
                         onSelected: (_) => setState(() => _kind = k),
