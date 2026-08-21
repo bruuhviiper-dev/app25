@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/app_theme.dart';
+import 'data/verses.dart';
 import 'screens/create_screen.dart';
 import 'screens/favorites_screen.dart';
 import 'screens/home_screen.dart';
@@ -28,6 +29,10 @@ Future<void> main() async {
   GoogleFonts.lora();
   final prefs = await SharedPreferences.getInstance();
   final appState = AppState(prefs);
+
+  // Carrega as frases do bundle (assets/frases/*.json) antes de abrir a home,
+  // para que nenhuma tela veja conteúdo vazio.
+  await VerseData.load();
 
   AdsService.instance.init();
 
