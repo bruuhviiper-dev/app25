@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/app_palettes.dart';
+import '../data/models.dart';
 
 /// Estado global: favoritos, tema, compras/premium e tema de cores.
 /// Tudo salvo localmente (privado do aparelho).
@@ -25,12 +26,17 @@ class AppState extends ChangeNotifier {
   static const _kTempPro = 'temp_pro_until';
   static const _kRecipient = 'recipient_name';
 
+  /// Separador interno para serializar favoritos ("referenciatexto").
+  static const _favSep = '';
+
   static const String pRemoveAds = 'no_ads';
   static const String pWatermark = 'remove_watermark';
   static const String pBundle = 'premium_bundle';
   static const String pPack = 'pack_oracoes';
 
-  final Set<String> _favorites = {};
+  // Favoritos guardam o texto completo (não só o id), assim aparecem no
+  // Favoritos venham de onde vierem (categorias, "Ver mais", editor...).
+  final Map<String, Verse> _favVerses = {};
   final Set<String> _entitlements = {};
   final Set<String> _subscriptions = {};
   ThemeMode _themeMode = ThemeMode.light;
@@ -44,11 +50,12 @@ class AppState extends ChangeNotifier {
   DateTime? _tempProUntil;
 
   // ----- básico -----
-  Set<String> get favorites => Set.unmodifiable(_favorites);
+  /// Frases favoritadas (as mais recentes primeiro).
+  List<Verse> get favoriteVerses => _favVerses.values.toList().reversed.toList();
   ThemeMode get themeMode => _themeMode;
   bool get isDark => _themeMode == ThemeMode.dark;
-  bool get hasFavorites => _favorites.isNotEmpty;
-  bool isFavorite(String id) => _favorites.contains(id);
+  bool get hasFavorites => _favVerses.isNotEmpty;
+  bool isFavorite(String id) => _favVerses.containsKey(id);
 
   // ----- lembrete diário -----
   bool get reminderOn => _reminderOn;
@@ -140,7 +147,14 @@ class AppState extends ChangeNotifier {
   bool ownsPalette(String paletteId) => true;
 
   void _load() {
-    _favorites.addAll(_prefs.getStringList(_kFavorites) ?? const []);
+    for (final e in _prefs.getStringList(_kFavorites) ?? const []) {
+      // Formato novo: "referenciatexto". (Ids antigos, sem separador,
+      // são descartados — o texto não podia ser reconstruído.)
+      final i = e.indexOf('');
+      if (i < 0) continue;
+      final v = Verse(e.substring(i + 1), e.substring(0, i));
+      _favVerses[v.id] = v;
+    }
     final t = _prefs.getInt(_kThemeMode);
     if (t != null && t >= 0 && t < ThemeMode.values.length) {
       _themeMode = ThemeMode.values[t];
@@ -161,9 +175,11 @@ class AppState extends ChangeNotifier {
     _recipientName = _prefs.getString(_kRecipient) ?? '';
   }
 
-  void toggleFavorite(String id) {
-    if (!_favorites.remove(id)) _favorites.add(id);
-    _prefs.setStringList(_kFavorites, _favorites.toList());
+  void toggleFavorite(Verse v) {
+    if (_favVerses.remove(v.id) == null) _favVerses[v.id] = v;
+    _prefs.setStringList(_kFavorites, [
+      for (final f in _favVerses.values) '${f.reference}$_favSep${f.text}',
+    ]);
     notifyListeners();
   }
 

@@ -40,7 +40,7 @@ class VerseTile extends StatelessWidget {
                   icon: Icon(fav ? Icons.favorite : Icons.favorite_border,
                       color: fav ? const Color(0xFFE11D48) : null),
                   onPressed: () =>
-                      context.read<AppState>().toggleFavorite(verse.id),
+                      context.read<AppState>().toggleFavorite(verse),
                 ),
                 IconButton(
                   tooltip: 'Editar',

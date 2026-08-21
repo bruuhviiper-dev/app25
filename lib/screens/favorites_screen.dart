@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../data/verses.dart';
 import '../services/app_state.dart';
 import '../widgets/verse_tile.dart';
 
-/// Versículos favoritados pelo usuário (salvos localmente).
+/// Frases favoritadas pelo usuário (salvas localmente).
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final favs =
-        VerseData.all.where((v) => state.isFavorite(v.id)).toList();
+    final favs = state.favoriteVerses;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Favoritos')),

@@ -16,10 +16,8 @@ class MessagesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final state = context.watch<AppState>();
-    final msgCount = GreetingGenerator.total;
-    final itemCount = msgCount;
+    final itemCount = GreetingGenerator.total;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Frases Bonitas')),
@@ -30,8 +28,8 @@ class MessagesScreen extends StatelessWidget {
           final msgIndex = i;
           final text = GreetingGenerator.byIndex(msgIndex);
           final share = '$text\n\n🌸 Frases Bonitas';
-          final favId = Verse(text).id;
-          final fav = state.isFavorite(favId);
+          final verse = Verse(text);
+          final fav = state.isFavorite(verse.id);
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
@@ -42,11 +40,6 @@ class MessagesScreen extends StatelessWidget {
                   Text(text, style: GoogleFonts.lora(fontSize: 16, height: 1.5)),
                   Row(
                     children: [
-                      Text('Mensagem #${msgIndex + 1}',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: scheme.primary)),
                       const Spacer(),
                       IconButton(
                         tooltip: fav ? 'Desfavoritar' : 'Favoritar',
@@ -55,7 +48,7 @@ class MessagesScreen extends StatelessWidget {
                             size: 20,
                             color: fav ? const Color(0xFFE11D48) : null),
                         onPressed: () =>
-                            context.read<AppState>().toggleFavorite(favId),
+                            context.read<AppState>().toggleFavorite(verse),
                       ),
                       IconButton(
                         tooltip: 'Copiar',
