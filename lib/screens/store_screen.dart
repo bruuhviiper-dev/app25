@@ -37,9 +37,11 @@ class StoreScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
+              // Card acompanha o tema escolhido (só o estado "removido" fica
+              // verde, como sinal de concluído).
               gradient: AppTheme.gradient(state.adsRemoved
                   ? const [Color(0xFF11998E), Color(0xFF38EF7D)]
-                  : const [Color(0xFFFF758C), Color(0xFFFF7EB3)]),
+                  : state.palette.gradient),
               borderRadius: BorderRadius.circular(26),
               boxShadow: [
                 BoxShadow(
@@ -79,7 +81,7 @@ class StoreScreen extends StatelessWidget {
                     child: FilledButton(
                       style: FilledButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFFC2185B),
+                          foregroundColor: state.accentColor,
                           padding: const EdgeInsets.symmetric(vertical: 14)),
                       onPressed: () => _buy(context, StoreProducts.removeAds.id),
                       child: Text('Remover anúncios  •  $price',

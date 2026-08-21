@@ -55,18 +55,34 @@ class HomeScreen extends StatelessWidget {
             child: _MessageOfDay(),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
-            child:
-                Text('Categorias', style: Theme.of(context).textTheme.titleLarge),
+            padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
+            child: Row(
+              children: [
+                Text('Categorias',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const Spacer(),
+                IconButton(
+                  tooltip: state.categorySingleColumn
+                      ? 'Ver em 2 colunas'
+                      : 'Ver em 1 coluna',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(state.categorySingleColumn
+                      ? Icons.grid_view_rounded
+                      : Icons.view_agenda_rounded),
+                  onPressed: () =>
+                      context.read<AppState>().toggleCategoryColumns(),
+                ),
+              ],
+            ),
           ),
           GridView.count(
-            crossAxisCount: 2,
+            crossAxisCount: state.categorySingleColumn ? 1 : 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             mainAxisSpacing: 16,
             crossAxisSpacing: 16,
-            childAspectRatio: 1.05,
+            childAspectRatio: state.categorySingleColumn ? 2.5 : 1.05,
             children: [
               for (final c in VerseData.categories)
                 _CategoryTile(

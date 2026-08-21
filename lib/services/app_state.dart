@@ -25,6 +25,7 @@ class AppState extends ChangeNotifier {
   static const _kSignature = 'custom_signature';
   static const _kTempPro = 'temp_pro_until';
   static const _kRecipient = 'recipient_name';
+  static const _kCatSingle = 'cat_single_col';
 
   /// Separador interno para serializar favoritos ("referenciatexto").
   static const _favSep = '';
@@ -48,6 +49,7 @@ class AppState extends ChangeNotifier {
   int _reminderMin = 0;
   String _customSignature = '';
   DateTime? _tempProUntil;
+  bool _catSingleCol = false;
 
   // ----- básico -----
   /// Frases favoritadas (as mais recentes primeiro).
@@ -56,6 +58,14 @@ class AppState extends ChangeNotifier {
   bool get isDark => _themeMode == ThemeMode.dark;
   bool get hasFavorites => _favVerses.isNotEmpty;
   bool isFavorite(String id) => _favVerses.containsKey(id);
+
+  /// Grade de categorias: true = 1 coluna (card full-width), false = 2 colunas.
+  bool get categorySingleColumn => _catSingleCol;
+  void toggleCategoryColumns() {
+    _catSingleCol = !_catSingleCol;
+    _prefs.setBool(_kCatSingle, _catSingleCol);
+    notifyListeners();
+  }
 
   // ----- lembrete diário -----
   bool get reminderOn => _reminderOn;
@@ -173,6 +183,7 @@ class AppState extends ChangeNotifier {
     final tp = _prefs.getInt(_kTempPro);
     _tempProUntil = tp != null ? DateTime.fromMillisecondsSinceEpoch(tp) : null;
     _recipientName = _prefs.getString(_kRecipient) ?? '';
+    _catSingleCol = _prefs.getBool(_kCatSingle) ?? false;
   }
 
   void toggleFavorite(Verse v) {
