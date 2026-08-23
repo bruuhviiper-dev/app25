@@ -22,7 +22,7 @@ class AdsService with WidgetsBindingObserver {
   // IDs reais (app24 — Frases Bonitas)
   static const _realBanner = 'ca-app-pub-5880219350817278/7877768786';
   static const _realInterstitial = 'ca-app-pub-0000000000000000/0000000000';
-  static const _realRewarded = 'ca-app-pub-0000000000000000/0000000000';
+  static const _realRewarded = 'ca-app-pub-5880219350817278/1436629308';
   static const _realAppOpen = 'ca-app-pub-0000000000000000/0000000000';
   static bool _ph(String id) => id.contains('0000000000');
 
