@@ -19,10 +19,10 @@ class AdsService with WidgetsBindingObserver {
   static const _testRewarded = 'ca-app-pub-3940256099942544/5224354917';
   static const _testAppOpen = 'ca-app-pub-3940256099942544/9257395921';
 
-  // IDs reais (app24 — Frases Bonitas)
-  static const _realBanner = 'ca-app-pub-5880219350817278/7877768786';
+  // IDs reais (Frases Bonitas — conta AdMob 5880219350817278)
+  static const _realBanner = 'ca-app-pub-5880219350817278/4557895907';
   static const _realInterstitial = 'ca-app-pub-0000000000000000/0000000000';
-  static const _realRewarded = 'ca-app-pub-5880219350817278/1436629308';
+  static const _realRewarded = 'ca-app-pub-5880219350817278/3703601934';
   static const _realAppOpen = 'ca-app-pub-0000000000000000/0000000000';
   static bool _ph(String id) => id.contains('0000000000');
 

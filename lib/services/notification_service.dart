@@ -3,7 +3,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
-import '../data/greeting_generator.dart';
+import '../data/verses.dart';
 
 /// Notificação diária (frase no horário escolhido). Ao TOCAR, abre
 /// exatamente a mensagem da notificação (mesmo com o app fechado).
@@ -60,7 +60,9 @@ class NotificationService {
   Future<void> scheduleDaily(int hour, int minute) async {
     await init();
     await _plugin.cancel(_dailyId);
-    final body = GreetingGenerator.ofNow().replaceAll('{nome}', 'você');
+    // Mesma fonte do card do topo (VerseData.ofDay): a notificação e a "frase do
+    // dia" na home ficam sempre em sincronia (mesma frase, mesma base de dados).
+    final body = VerseData.ofDay();
     await _plugin.zonedSchedule(
       _dailyId,
       'Frases Bonitas 🌸',

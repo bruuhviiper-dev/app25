@@ -24,7 +24,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   _View _view = _View.texto;
 
   void _openEditor(String text, int bgIndex) {
-    Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+    Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => CreateScreen(
         initialText: text,
         initialImageBg: bgIndex % ImageBackgrounds.all.length,

@@ -225,7 +225,7 @@ class _MessageOfDayState extends State<_MessageOfDay> {
   }
 
   void _openEditor() {
-    Navigator.of(context, rootNavigator: true).push(
+    Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => CreateScreen(initialText: _msg.text)),
     );
   }

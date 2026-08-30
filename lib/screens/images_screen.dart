@@ -36,7 +36,7 @@ class _ImagesScreenState extends State<ImagesScreen> {
       [for (final v in VerseData.freeVerses) v.text];
 
   void _openEditor(String text, int i) {
-    Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+    Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => switch (_kind) {
         _Kind.fundos => CreateScreen(initialText: text, initialImageBg: i),
         _Kind.texturas => CreateScreen(initialText: text, initialTexture: i),
@@ -84,10 +84,12 @@ class _ImagesScreenState extends State<ImagesScreen> {
         top: false,
         child: Column(
           children: [
-            // ---- Filtros por tipo ----
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-              child: Row(
+            // ---- Filtros por tipo (rola na horizontal: nunca estoura) ----
+            SizedBox(
+              height: 46,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
                 children: [
                   for (final k in _Kind.values)
                     Padding(

@@ -65,7 +65,7 @@ class MessagesScreen extends StatelessWidget {
                       IconButton(
                         tooltip: 'Criar imagem',
                         icon: const Icon(Icons.image_rounded, size: 20),
-                        onPressed: () => Navigator.of(context, rootNavigator: true)
+                        onPressed: () => Navigator.of(context)
                             .push(MaterialPageRoute(
                                 builder: (_) => CreateScreen(initialText: text))),
                       ),

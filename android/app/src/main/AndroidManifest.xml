@@ -16,7 +16,7 @@
         <!-- AdMob App ID REAL (app25 — Frases Bonitas) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-5880219350817278~8756520001"/>
+            android:value="ca-app-pub-5880219350817278~2666159925"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"
